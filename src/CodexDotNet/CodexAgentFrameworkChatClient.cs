@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 
-namespace CodexConsoleChat;
+namespace CodexDotNet;
 
 /// <summary>
 /// Adapts <see cref="ICodexClient" /> to the Microsoft Agent Framework chat provider contract.

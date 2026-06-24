@@ -5,10 +5,10 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-    <PackageId>CodexConsoleChat</PackageId>
-    <Title>CodexConsoleChat</Title>
+    <PackageId>CodexDotNet</PackageId>
+    <Title>CodexDotNet</Title>
     <Description>Portable .NET client library for authenticating with and calling the ChatGPT Codex backend.</Description>
-    <Authors>CodexConsoleChat contributors</Authors>
+    <Authors>CodexDotNet contributors</Authors>
     <PackageTags>codex;chatgpt;openai;client;oauth</PackageTags>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
