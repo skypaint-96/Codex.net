@@ -4,7 +4,7 @@ public sealed class CodexOptions
 {
     public const string DefaultBaseUrl = "https://chatgpt.com/backend-api/codex";
     public const string DefaultAuthIssuer = "https://auth.openai.com";
-    public const string DefaultModel = "gpt-5.3-codex";
+    public const string DefaultModel = "gpt-5.5";
     public const int DefaultLoginPort = 1455;
 
     public string BaseUrl { get; init; } = DefaultBaseUrl;

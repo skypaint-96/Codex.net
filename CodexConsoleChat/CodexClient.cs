@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 
 namespace CodexConsoleChat;
 
-public sealed class CodexClient
+public sealed class CodexClient : ICodexClient
 {
     private sealed class StreamState
     {
@@ -23,14 +23,27 @@ public sealed class CodexClient
 
     private readonly HttpClient _httpClient;
     private readonly CodexOptions _options;
-    private readonly CodexAuthManager _authManager;
+    private readonly ICodexAuthManager _authManager;
     private readonly string _sessionId = Guid.NewGuid().ToString("N");
 
-    public CodexClient(HttpClient httpClient, CodexOptions options, CodexAuthManager authManager)
+    public CodexClient(HttpClient httpClient, CodexOptions options, ICodexAuthManager authManager)
     {
         _httpClient = httpClient;
         _options = options;
         _authManager = authManager;
+    }
+
+    public async Task<CodexChatResponse> ChatAsync(
+        IReadOnlyList<ChatTurn> history,
+        CancellationToken cancellationToken = default)
+    {
+        StringBuilder text = new();
+        await foreach (string fragment in StreamChatAsync(history, cancellationToken))
+        {
+            text.Append(fragment);
+        }
+
+        return new CodexChatResponse(text.ToString());
     }
 
     public async IAsyncEnumerable<string> StreamChatAsync(

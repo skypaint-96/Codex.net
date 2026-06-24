@@ -10,7 +10,7 @@ using System.Text.Json.Serialization;
 
 namespace CodexConsoleChat;
 
-public sealed class CodexAuthManager
+public sealed class CodexAuthManager : ICodexAuthManager
 {
     // Matches the official Codex CLI OAuth client id.
     public const string ClientId = "app_EMoamEEZ73f0CkXaXp7hrann";
@@ -174,7 +174,9 @@ public sealed class CodexAuthManager
             Message: "auth.json exists, but it does not contain a supported ChatGPT token set.");
     }
 
-    public async Task<CodexCredentials> LoginWithBrowserAsync(CancellationToken cancellationToken = default)
+    public async Task<CodexCredentials> LoginWithBrowserAsync(
+        CodexAuthCallbacks? callbacks = null,
+        CancellationToken cancellationToken = default)
     {
         PkceCodes pkce = GeneratePkceCodes();
         string state = GenerateBase64UrlRandom(32);
@@ -184,11 +186,13 @@ public sealed class CodexAuthManager
         string redirectUri = $"http://localhost:{port}/auth/callback";
         string authUrl = BuildAuthorizeUrl(redirectUri, pkce.CodeChallenge, state);
 
-        Console.WriteLine($"Starting local login server on {redirectUri}");
-        Console.WriteLine("Opening browser for ChatGPT sign-in.");
-        Console.WriteLine("If it did not open, paste this URL into your browser:");
-        Console.WriteLine(authUrl);
-        Console.WriteLine();
+        callbacks?.OnNotification?.Invoke(new CodexAuthNotification(
+            CodexAuthNotificationLevel.Information,
+            $"Starting local login server on {redirectUri}"));
+        callbacks?.OnNotification?.Invoke(new CodexAuthNotification(
+            CodexAuthNotificationLevel.Information,
+            "Opening browser for ChatGPT sign-in."));
+        callbacks?.OnBrowserLoginUrl?.Invoke(authUrl);
 
         TryOpenBrowser(authUrl);
 
@@ -210,15 +214,17 @@ public sealed class CodexAuthManager
         }
     }
 
-    public async Task<CodexCredentials> LoginWithDeviceCodeAsync(CancellationToken cancellationToken = default)
+    public async Task<CodexCredentials> LoginWithDeviceCodeAsync(
+        CodexAuthCallbacks? callbacks = null,
+        CancellationToken cancellationToken = default)
     {
         DeviceCode deviceCode = await RequestDeviceCodeAsync(cancellationToken);
 
-        Console.WriteLine("Follow these steps to sign in with ChatGPT using a device code:");
-        Console.WriteLine($"1. Open: {deviceCode.VerificationUrl}");
-        Console.WriteLine($"2. Enter code: {deviceCode.UserCode}");
-        Console.WriteLine("The code expires in 15 minutes. Never share this code with anyone.");
-        Console.WriteLine();
+        callbacks?.OnDeviceCode?.Invoke(new DeviceCodeLoginInfo(
+            deviceCode.VerificationUrl,
+            deviceCode.UserCode,
+            DateTimeOffset.UtcNow.Add(DeviceLoginTimeout),
+            TimeSpan.FromSeconds(deviceCode.Interval)));
 
         DeviceTokenReady tokenReady = await PollForDeviceAuthorizationAsync(deviceCode, cancellationToken);
         string redirectUri = $"{_options.AuthIssuer.TrimEnd('/')}/deviceauth/callback";
@@ -232,7 +238,10 @@ public sealed class CodexAuthManager
         return await GetAccessTokenAsync(forceRefresh: false, cancellationToken);
     }
 
-    public async Task LogoutAsync(bool revoke = true, CancellationToken cancellationToken = default)
+    public async Task LogoutAsync(
+        bool revoke = true,
+        CodexAuthCallbacks? callbacks = null,
+        CancellationToken cancellationToken = default)
     {
         AuthDotJson? auth = await LoadAuthAsync(cancellationToken);
 
@@ -254,7 +263,10 @@ public sealed class CodexAuthManager
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine($"Warning: token revoke failed, deleting local cache anyway: {ex.Message}");
+                    callbacks?.OnNotification?.Invoke(new CodexAuthNotification(
+                        CodexAuthNotificationLevel.Warning,
+                        $"Token revoke failed, deleting local cache anyway: {ex.Message}",
+                        ex));
                 }
             }
         }

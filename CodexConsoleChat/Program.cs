@@ -130,7 +130,7 @@ static async Task<bool> HandleCommandAsync(
         case "/login":
             await RunAuthActionAsync("Browser login", async ct =>
             {
-                CodexCredentials credentials = await authManager.LoginWithBrowserAsync(ct);
+                CodexCredentials credentials = await authManager.LoginWithBrowserAsync(CreateConsoleAuthCallbacks(), ct);
                 Console.WriteLine($"Signed in. Token source: {credentials.Source}");
             });
             return true;
@@ -138,7 +138,7 @@ static async Task<bool> HandleCommandAsync(
         case "/login-device":
             await RunAuthActionAsync("Device-code login", async ct =>
             {
-                CodexCredentials credentials = await authManager.LoginWithDeviceCodeAsync(ct);
+                CodexCredentials credentials = await authManager.LoginWithDeviceCodeAsync(CreateConsoleAuthCallbacks(), ct);
                 Console.WriteLine($"Signed in. Token source: {credentials.Source}");
             });
             return true;
@@ -158,7 +158,7 @@ static async Task<bool> HandleCommandAsync(
         case "/logout":
             await RunAuthActionAsync("Logout", async ct =>
             {
-                await authManager.LogoutAsync(revoke: true, ct);
+                await authManager.LogoutAsync(revoke: true, CreateConsoleAuthCallbacks(), ct);
                 history.Clear();
                 Console.WriteLine("Logged out and cleared local conversation history.");
             });
@@ -252,6 +252,35 @@ static void PrintHelp()
     Console.WriteLine("  /auth-file     Print the auth cache path.");
     Console.WriteLine("  /clear         Clear in-memory conversation history.");
     Console.WriteLine("  /exit          Quit.");
+}
+
+static CodexAuthCallbacks CreateConsoleAuthCallbacks()
+{
+    return new CodexAuthCallbacks
+    {
+        OnNotification = notification =>
+        {
+            TextWriter writer = notification.Level == CodexAuthNotificationLevel.Warning
+                || notification.Level == CodexAuthNotificationLevel.Error
+                    ? Console.Error
+                    : Console.Out;
+            writer.WriteLine(notification.Message);
+        },
+        OnBrowserLoginUrl = url =>
+        {
+            Console.WriteLine("If it did not open, paste this URL into your browser:");
+            Console.WriteLine(url);
+            Console.WriteLine();
+        },
+        OnDeviceCode = info =>
+        {
+            Console.WriteLine("Follow these steps to sign in with ChatGPT using a device code:");
+            Console.WriteLine($"1. Open: {info.VerificationUrl}");
+            Console.WriteLine($"2. Enter code: {info.UserCode}");
+            Console.WriteLine($"The code expires at {info.ExpiresAt:O}. Never share this code with anyone.");
+            Console.WriteLine();
+        }
+    };
 }
 
 static void RemoveLastUserTurn(List<ChatTurn> history)
