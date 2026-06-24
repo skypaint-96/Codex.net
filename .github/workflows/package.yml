@@ -5,9 +5,13 @@ on:
     branches:
       - Development
       - Production
+  push:
+    branches:
+      - Development
+      - Production
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -46,10 +50,42 @@ jobs:
             dotnet test "$test_project" --configuration Release --no-restore --no-build
           done
 
+      - name: Get package version
+        if: github.event_name == 'push'
+        id: version
+        shell: bash
+        run: |
+          version=$(dotnet msbuild src/CodexDotNet/CodexDotNet.csproj -getProperty:NuGetPackageVersion)
+          if [ -z "$version" ]; then
+            version=$(dotnet msbuild src/CodexDotNet/CodexDotNet.csproj -getProperty:Version)
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Pack
-        if: github.base_ref == 'Production'
+        if: github.event_name == 'push'
         run: dotnet pack src/CodexDotNet/CodexDotNet.csproj --configuration Release --no-build --output ./artifacts/packages
 
       - name: Publish to GitHub Packages
-        if: github.base_ref == 'Production'
+        if: github.event_name == 'push'
         run: dotnet nuget push "./artifacts/packages/*.nupkg" --api-key "${{ secrets.GITHUB_TOKEN }}" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
+
+      - name: Tag published commit
+        if: github.event_name == 'push'
+        shell: bash
+        env:
+          BRANCH_TAG: ${{ github.ref_name }}
+          VERSION_TAG: v${{ steps.version.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${VERSION_TAG}" >/dev/null 2>&1; then
+            echo "Version tag ${VERSION_TAG} already exists; leaving it unchanged."
+          else
+            git tag "${VERSION_TAG}" "${GITHUB_SHA}"
+            git push origin "refs/tags/${VERSION_TAG}"
+          fi
+
+          git tag --force "${BRANCH_TAG}" "${GITHUB_SHA}"
+          git push --force origin "refs/tags/${BRANCH_TAG}"
