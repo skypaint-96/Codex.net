@@ -5,7 +5,8 @@ Portable .NET 10 class library for authenticating with and calling the ChatGPT C
 The library provides:
 
 - `CodexClient` / `ICodexClient` for streaming and non-streaming chat calls.
-- `CodexAgentFrameworkChatClient` for Microsoft Agent Framework / `Microsoft.Extensions.AI` integration.
+- `CodexAgent` for Microsoft Agent Framework custom-agent provider integration.
+- `CodexAgentFrameworkChatClient` as a legacy Microsoft Agent Framework / `Microsoft.Extensions.AI` chat-client adapter.
 - `CodexAuthManager` / `ICodexAuthManager` for ChatGPT OAuth token cache management.
 - Library-friendly auth callbacks via `CodexAuthCallbacks`; no library method writes to `Console`.
 - Request/response models such as `ChatTurn`, `CodexChatResponse`, `CodexCredentials`, `AuthStatus`, and `DeviceCodeLoginInfo`.
@@ -106,30 +107,36 @@ await authManager.LoginWithDeviceCodeAsync(callbacks, cancellationToken);
 
 ## Microsoft Agent Framework provider usage
 
-The package references `Microsoft.Agents.AI` and exposes `CodexAgentFrameworkChatClient`, an `IChatClient` adapter that can back Agent Framework `ChatClientAgent` instances.
+The package references `Microsoft.Agents.AI` and exposes `CodexAgent`, an `AIAgent` custom agent provider that uses `CodexClient` for transport and keeps local session history in the Agent Framework session state.
 
 ```csharp
 using CodexDotNet;
 using Microsoft.Agents.AI;
-using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 
-CodexOptions options = CodexOptions.FromEnvironment();
-using HttpClient httpClient = new() { Timeout = Timeout.InfiniteTimeSpan };
-
-ICodexAuthManager authManager = new CodexAuthManager(httpClient, options);
-ICodexClient codexClient = new CodexClient(httpClient, options, authManager);
-IChatClient chatClient = new CodexAgentFrameworkChatClient(codexClient, options);
-
-ChatClientAgent agent = new(
-    chatClient,
-    new ChatClientAgentOptions
+ServiceCollection services = new();
+services.AddCodexAgent(
+    CodexOptions.FromEnvironment(),
+    new CodexAgentOptions
     {
+        Id = "codex-dotnet",
         Name = "Codex",
-        Instructions = "You are Codex, a helpful coding assistant."
+        Description = "Codex custom agent for coding assistance."
     });
+
+await using ServiceProvider provider = services.BuildServiceProvider();
+AIAgent agent = provider.GetRequiredService<AIAgent>();
+
+AgentSession session = await agent.CreateSessionAsync(cancellationToken);
+AgentResponse response = await agent.RunAsync(
+    "Write a C# function that parses an int safely.",
+    session,
+    cancellationToken: cancellationToken);
+
+Console.WriteLine(response.Text);
 ```
 
-The adapter maps Agent Framework `ChatMessage` values to `ChatTurn` values and supports both `GetResponseAsync` and `GetStreamingResponseAsync`.
+`CodexAgentFrameworkChatClient` remains available as an `IChatClient` adapter for hosts that still want to compose their own `ChatClientAgent`. New Microsoft Agent Framework integrations should prefer resolving `CodexAgent` or `AIAgent` from DI via `AddCodexAgent`.
 
 The chat request path refreshes automatically before expiry and retries once after a `401`. You can also call:
 
