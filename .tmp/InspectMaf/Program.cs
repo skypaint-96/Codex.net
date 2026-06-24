@@ -1,0 +1,1 @@
+using System.Reflection; using Microsoft.Agents.AI; var t=typeof(AIAgent); foreach(var p in t.GetProperties(BindingFlags.Public|BindingFlags.Instance|BindingFlags.DeclaredOnly)) System.Console.WriteLine(p.Name+" set="+p.SetMethod+" initmods="+string.Join(",", p.SetMethod?.ReturnParameter.GetRequiredCustomModifiers().Select(x=>x.Name) ?? []));
