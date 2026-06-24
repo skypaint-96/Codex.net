@@ -1,5 +1,5 @@
 using System.Text;
-using CodexConsoleChat;
+using CodexDotNet;
 
 CodexOptions options = CodexOptions.FromEnvironment();
 

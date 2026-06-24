@@ -1,4 +1,4 @@
-namespace CodexConsoleChat;
+namespace CodexDotNet;
 
 public interface ICodexClient
 {

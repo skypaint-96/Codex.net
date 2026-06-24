@@ -1,4 +1,4 @@
-# CodexConsoleChat
+# CodexDotNet
 
 Portable .NET 10 class library for authenticating with and calling the ChatGPT Codex backend. The project can be packed as a NuGet package and consumed from .NET 10-compatible console apps, desktop apps, services, workers, or tests.
 
@@ -26,13 +26,13 @@ Install the .NET 10 SDK before building, packing, or referencing the project.
 Reference the project directly while developing:
 
 ```bash
-dotnet add reference ../CodexConsoleChat/CodexConsoleChat.csproj
+dotnet add reference ../CodexDotNet/CodexDotNet.csproj
 ```
 
 Pack it for NuGet distribution:
 
 ```bash
-dotnet pack CodexConsoleChat.csproj -c Release
+dotnet pack CodexDotNet.csproj -c Release
 ```
 
 The project includes NuGet metadata and packs this `README.md` into the package.
@@ -40,7 +40,7 @@ The project includes NuGet metadata and packs this `README.md` into the package.
 ## Basic usage
 
 ```csharp
-using CodexConsoleChat;
+using CodexDotNet;
 
 CodexOptions options = CodexOptions.FromEnvironment();
 
@@ -109,7 +109,7 @@ await authManager.LoginWithDeviceCodeAsync(callbacks, cancellationToken);
 The package references `Microsoft.Agents.AI` and exposes `CodexAgentFrameworkChatClient`, an `IChatClient` adapter that can back Agent Framework `ChatClientAgent` instances.
 
 ```csharp
-using CodexConsoleChat;
+using CodexDotNet;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -173,7 +173,7 @@ The project is now a class library. `Program.cs` is excluded from compilation an
 Old console flow:
 
 ```text
-dotnet run --project CodexConsoleChat.csproj
+dotnet run --project CodexDotNet.csproj
 /login
 You> write code
 ```

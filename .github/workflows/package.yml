@@ -27,10 +27,10 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore
-        run: dotnet restore src/CodexDotNet/CodexConsoleChat.csproj
+        run: dotnet restore src/CodexDotNet/CodexDotNet.csproj
 
       - name: Build
-        run: dotnet build src/CodexDotNet/CodexConsoleChat.csproj --configuration Release --no-restore
+        run: dotnet build src/CodexDotNet/CodexDotNet.csproj --configuration Release --no-restore
 
       - name: Test discovered test projects
         shell: bash
@@ -48,7 +48,7 @@ jobs:
 
       - name: Pack
         if: github.base_ref == 'Production'
-        run: dotnet pack src/CodexDotNet/CodexConsoleChat.csproj --configuration Release --no-build --output ./artifacts/packages
+        run: dotnet pack src/CodexDotNet/CodexDotNet.csproj --configuration Release --no-build --output ./artifacts/packages
 
       - name: Publish to GitHub Packages
         if: github.base_ref == 'Production'

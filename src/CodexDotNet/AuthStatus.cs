@@ -1,4 +1,4 @@
-namespace CodexConsoleChat;
+namespace CodexDotNet;
 
 public sealed record AuthStatus(
     bool IsAuthenticated,
