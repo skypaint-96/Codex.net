@@ -1,0 +1,55 @@
+name: Build, Test, and Package
+
+on:
+  pull_request:
+    branches:
+      - Development
+      - Production
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore src/CodexDotNet/CodexConsoleChat.csproj
+
+      - name: Build
+        run: dotnet build src/CodexDotNet/CodexConsoleChat.csproj --configuration Release --no-restore
+
+      - name: Test discovered test projects
+        shell: bash
+        run: |
+          mapfile -t test_projects < <(find . -type f \( -name '*Tests.csproj' -o -name '*Test.csproj' \))
+
+          if [ "${#test_projects[@]}" -eq 0 ]; then
+            echo "No test projects were discovered; skipping dotnet test."
+            exit 0
+          fi
+
+          for test_project in "${test_projects[@]}"; do
+            dotnet test "$test_project" --configuration Release --no-restore --no-build
+          done
+
+      - name: Pack
+        if: github.base_ref == 'Production'
+        run: dotnet pack src/CodexDotNet/CodexConsoleChat.csproj --configuration Release --no-build --output ./artifacts/packages
+
+      - name: Publish to GitHub Packages
+        if: github.base_ref == 'Production'
+        run: dotnet nuget push "./artifacts/packages/*.nupkg" --api-key "${{ secrets.GITHUB_TOKEN }}" --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
